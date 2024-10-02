@@ -53,6 +53,7 @@ fun <T : Any> DragDropColumn3(
                     onDrag = { change, offset ->
                         change.consume()
 
+
                         val moveDirection = when {
                             offset.y < 0 -> -1 // move up
                             offset.y > 0 -> 1 // move down

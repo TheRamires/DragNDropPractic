@@ -1,5 +1,6 @@
 package com.example.dragndrop2.drag_n_drop_3
 
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -15,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -25,16 +27,21 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.dragndrop2.model.Category
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
 
 @Composable
 fun rememberDragDropState4(
     lazyListState: LazyListState,
     onSwap: (Int, Int) -> Unit
 ): DragDropState4 {
+    val density = LocalDensity.current.density
     val scope = rememberCoroutineScope()
     val state = remember(lazyListState) {
         DragDropState4(
             state = lazyListState,
+            paddingPx = PADDING_CONTENT_LAZY_COLUMN_DP * density
         )
     }
     return state
@@ -51,6 +58,8 @@ fun LazyItemScope.DraggableItem4(
     content: @Composable () -> Unit
 ) {
     val density = LocalDensity.current.density
+    val coroutineScope = rememberCoroutineScope()
+
     val paddingContent = PADDING_CONTENT_LAZY_COLUMN_DP * density
 
     val currentYOffset: Float by animateFloatAsState(
@@ -62,19 +71,33 @@ fun LazyItemScope.DraggableItem4(
         derivedStateOf { index == dragDropState.selectedDraggable.itemIndex }
     }
 
-    val changedItem: DraggableItem4 by dragDropState.changed.collectAsState(DraggableItem4.empty())
-
     val changedAnimatable = remember { Animatable(0f) }
+    //val changedItem: DraggableItem4 by dragDropState.changedItemFlow.collectAsState(DraggableItem4.empty())
+    /*val thisItemChanged: Boolean by remember {
+        derivedStateOf{ changedItem.itemIndex == index }
+    }*/
 
-    LaunchedEffect(changedItem) {
-        if (changedItem.itemIndex == index) {
-            val itemInfo =
-                dragDropState.state.layoutInfo.visibleItemsInfo.first { it.index == index }
-            val itemInfoTop = itemInfo.offset
-            changedAnimatable.animateTo(
-                targetValue = itemInfoTop - changedItem.startPosition.yTop + paddingContent,
-                animationSpec = tween(easing = LinearEasing, durationMillis = CHANGED_DURATION_MS)
-            )
+    LaunchedEffect(Unit) {
+        dragDropState.changedItemFlow.collect { changedItem ->
+            val changedItemIndex = changedItem.itemIndex
+            //Log.d("TAGS42", "-- -- LaunchedEffect $index; collect $changedItemIndex")
+            if (index == changedItemIndex) {
+                coroutineScope.launch {
+                    try {
+                        val itemInfo = dragDropState.state.layoutInfo.visibleItemsInfo.first { it.index == index }
+                        val itemInfoTop = itemInfo.offset
+                        changedAnimatable.animateTo(
+                            targetValue = itemInfoTop - changedItem.startPosition.yTop,
+                            animationSpec = tween(easing = LinearEasing, durationMillis = CHANGED_DURATION_MS)
+                        )
+                    } catch (ex: CancellationException) {
+                        Log.d("TAGS42", "-- -- animation $index has ex ${ex.message}")
+                        throw ex
+                    }
+                }.invokeOnCompletion {
+                    Log.d("TAGS42", "-- -- animation $index was completed")
+                }
+            }
         }
     }
 

@@ -11,8 +11,19 @@ import com.example.dragndrop2.drag_n_drop.offsetEnd
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.sync.Mutex
 
+data class DraggableItem4(
+    val itemIndex: Int,
+    val startPosition: ItemOffset
+) {
+    class ItemOffset(val yTop: Float, val tBottom: Float)
+    companion object {
+        fun empty() = DraggableItem4(-1, ItemOffset(0f, 0f))
+    }
+}
+data class OnDragEvent(val offset: Offset, val moveDirection: Int)
+
 @Stable
-class DragDropState4(
+class DragDropState4Exp(
     val state: LazyListState,
     val paddingPx: Float
 ) {
@@ -62,13 +73,7 @@ class DragDropState4(
         yOffsetOfDraggable += offset.y
         val yTopOfDraggable = selectedDraggable.startPosition.yTop + yOffsetOfDraggable
 
-
-        val moveUp = moveDirection == -1
-        val moveDown = moveDirection == 1
-
-        val visibleItemsInfoList = if (moveUp) visibleItemsInfo.reversed() else visibleItemsInfo
-
-        visibleItemsInfoList.forEach { itemInfoTop ->
+        visibleItemsInfo.forEach { itemInfoTop ->
             val index = itemInfoTop.index
 
             val top: Float
@@ -84,6 +89,9 @@ class DragDropState4(
                 bottom = itemInfoTop.offsetEnd * 1f
             }
             val height = bottom - top
+
+            val moveUp = moveDirection == -1
+            val moveDown = moveDirection == 1
 
             when {
                 moveUp -> {
