@@ -19,7 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.example.dragndrop2.model.Category
@@ -41,7 +42,7 @@ fun <T : Any> DragDropColumn3(
     var overscrollJob by remember { mutableStateOf<Job?>(null) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val dragDropState = rememberDragDropState3(listState) { fromIndex, toIndex ->
+    val dragDropState = rememberDragDropState4(listState) { fromIndex, toIndex ->
         onSwap(fromIndex, toIndex)
     }
 
@@ -61,9 +62,7 @@ fun <T : Any> DragDropColumn3(
                         coroutineScope.launch {
                             dragDropState.onDrag(
                                 offset = offset,
-                                fingerOffset = Offset(x = change.position.x, y = change.position.y),
-                                moveDirection = moveDirection,
-                                composableScope = coroutineScope
+                                moveDirection = moveDirection
                             )
                         }
 
@@ -86,7 +85,9 @@ fun <T : Any> DragDropColumn3(
                             ?: run { overscrollJob?.cancel() }
                     },
                     onDragStart = { offset ->
-                        dragDropState.onDragStart(offset)
+                        coroutineScope.launch {
+                            dragDropState.onDragStart(offset)
+                        }
                         //Log.d("TAGS42", "-- onDragStart --")
                     },
                     onDragEnd = {
@@ -110,7 +111,7 @@ fun <T : Any> DragDropColumn3(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         itemsIndexed(items = list) { index, item ->
-            DraggableItem3(
+            DraggableItem4(
                 dragDropState = dragDropState,
                 index = index,
                 category = category,

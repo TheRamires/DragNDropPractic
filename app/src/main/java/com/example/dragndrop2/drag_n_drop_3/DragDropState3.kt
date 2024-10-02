@@ -24,7 +24,7 @@ private const val MOVE_UP = 1
 private const val MOVE_DOWN = -1
 private const val MOVE_NONE = 0
 
-private const val CHANGED_DURATION_MS = 100
+const val CHANGED_DURATION_MS = 100
 
 data class DraggableItem(
     val itemIndex: Int,
@@ -181,11 +181,7 @@ class DragDropState3(
                         Log.d("TAGS42", "-- > inRangeOfPrevious $inRangeOfPrevious; realTopPosition $realTopPosition; range $range")
                         if (inRangeOfPrevious) {
                             //Log.d("TAGS42", "realTopPosition $realTopPosition; top $top; bottom $bottom; range $range")
-                            if (action == 1) {
-                                return@coroutineScope
-                            } else {
-                                action = 1
-                            }
+
                             changedList.moveUp(DraggableItem(itemInfoIndex))
 
                             with(changedPosition) {
@@ -193,7 +189,6 @@ class DragDropState3(
                                 animatable.animateTo(targetValue = height * 1f, animationSpec = tween(easing = LinearEasing, durationMillis = CHANGED_DURATION_MS))
                                 changedPosition.reset()
                             }
-                            draggableYOffset += height
                             Log.d("TAGS42", "index $itemIndex; itemInfoIndex $itemInfoIndex")
                             onSwap(itemInfoIndex, itemIndex)
 
@@ -239,7 +234,6 @@ class DragDropState3(
                                 }
                                 Log.d("LOL", "2")
                             }
-                            draggableYOffset -= height
 
                             currentDraggable = DraggableItem(
                                 itemIndex = itemInfoIndex,
