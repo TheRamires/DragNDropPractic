@@ -8,9 +8,9 @@ data class DragDrop5(
     val newIndex: Int = originalIndex,
     val newPosition: ItemPosition = originalPosition
 ) {
-    fun getOffset() = newPosition.start - originalPosition.start
+    fun getOffset(): Float = newPosition.start - originalPosition.start
 
-    fun isEmpty() = originalIndex == -1
+    fun isEmpty(): Boolean = originalIndex == -1
 
     fun withChangedPosition(offset: Offset): DragDrop5 {
         val oldPosition = this.newPosition
@@ -25,7 +25,7 @@ data class DragDrop5(
     }
 }
 
-class ItemPosition(
+data class ItemPosition(
     val start: Float,
     val end: Float
 ) {
@@ -39,3 +39,5 @@ enum class Direction {
 }
 
 data class OnDragEvent(val offset: Offset, val direction: Direction)
+
+data class ExchangeEvent(val dragDrop5: DragDrop5, val direction: Direction)

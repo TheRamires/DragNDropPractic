@@ -21,7 +21,6 @@ class CursorLinkedList {
 
     @Synchronized
     fun moveDown(changed: DraggableItem): Boolean {
-        return false
         val cursor = cursor ?: throw IllegalStateException()
 
         val above = cursor.above
