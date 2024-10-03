@@ -105,6 +105,9 @@ class DragDropState4(
                             swappedStack.addLast(item)
                             Log.d("TAGS42", "-- changedItemFlow ${item.itemIndex}")
                             changedItemFlow.emit(item)
+                        } else {
+                            swappedStack.removeLast()
+                            changedItemFlow.emit(item)
                         }
                     }
                 }
@@ -125,6 +128,9 @@ class DragDropState4(
                         if (swappedStack.firstOrNull { it.itemIndex == index } == null) {
                             swappedStack.addLast(item)
                             Log.d("TAGS42", "-- changedItemFlow ${item.itemIndex}")
+                            changedItemFlow.emit(item)
+                        } else {
+                            swappedStack.removeLast()
                             changedItemFlow.emit(item)
                         }
                     }

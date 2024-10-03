@@ -23,6 +23,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.Direction
 import com.example.dragndrop2.model.Category
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -55,15 +56,15 @@ fun <T : Any> DragDropColumn3(
 
 
                         val moveDirection = when {
-                            offset.y < 0 -> -1 // move up
-                            offset.y > 0 -> 1 // move down
-                            else -> 0
+                            offset.y < 0 -> Direction.MOVE_UP // move up
+                            offset.y > 0 -> Direction.MOVE_DOWN // move down
+                            else -> Direction.NONE
                         }
 
                         coroutineScope.launch {
                             dragDropState.onDrag(
                                 offset = offset,
-                                moveDirection = moveDirection
+                                direction = moveDirection
                             )
                         }
 

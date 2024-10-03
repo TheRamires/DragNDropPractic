@@ -15,6 +15,8 @@ data class DraggableItem4(
     val itemIndex: Int,
     val startPosition: ItemOffset
 ) {
+    var newIndex = -1
+
     class ItemOffset(val yTop: Float, val tBottom: Float)
     companion object {
         fun empty() = DraggableItem4(-1, ItemOffset(0f, 0f))
@@ -95,7 +97,7 @@ class DragDropState4Exp(
 
             when {
                 moveUp -> {
-                    if (selectedDraggable.itemIndex < index) {
+                    if (selectedDraggable.newIndex < index) {
                         return@forEach
                     }
                     val range = top + (0.5 * height).toInt()
@@ -109,15 +111,23 @@ class DragDropState4Exp(
                             startPosition = DraggableItem4.ItemOffset(top - swapDistance - paddingPx, bottom - swapDistance - paddingPx)
                         )
 
-                        if (swappedStack.firstOrNull { it.itemIndex == index } == null) {
+                        if (swappedStack.lastOrNull()?.itemIndex == index) {
+                            swappedStack.removeLast()
+                        }
+                        swappedStack.addLast(item)
+                        selectedDraggable.newIndex = index
+                        Log.d("TAGS42", "-- changedItemFlow ${item.itemIndex}")
+                        changedItemFlow.emit(item)
+                        /*if (swappedStack.firstOrNull { it.itemIndex == index } == null) {
                             swappedStack.addLast(item)
+                            selectedDraggable.newIndex = index
                             Log.d("TAGS42", "-- changedItemFlow ${item.itemIndex}")
                             changedItemFlow.emit(item)
-                        }
+                        }*/
                     }
                 }
                 moveDown -> {
-                    if (selectedDraggable.itemIndex >= index) {
+                    if (selectedDraggable.newIndex >= index) {
                         return@forEach
                     }
                     val range = top - (0.5 * height).toInt()
@@ -130,11 +140,19 @@ class DragDropState4Exp(
                             startPosition = DraggableItem4.ItemOffset(top + swapDistance + paddingPx, bottom + swapDistance + paddingPx)
                         )
 
-                        if (swappedStack.firstOrNull { it.itemIndex == index } == null) {
+                        if (swappedStack.lastOrNull()?.itemIndex == index) {
+                            swappedStack.removeLast()
+                        }
+                        swappedStack.addLast(item)
+                        selectedDraggable.newIndex = index
+                        Log.d("TAGS42", "-- changedItemFlow ${item.itemIndex}")
+                        changedItemFlow.emit(item)
+                        /*if (swappedStack.firstOrNull { it.itemIndex == index } == null) {
                             swappedStack.addLast(item)
+                            selectedDraggable.newIndex = index
                             Log.d("TAGS42", "-- changedItemFlow ${item.itemIndex}")
                             changedItemFlow.emit(item)
-                        }
+                        }*/
                     }
                 }
             }

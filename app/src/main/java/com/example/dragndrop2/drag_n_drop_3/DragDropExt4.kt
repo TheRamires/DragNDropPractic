@@ -16,7 +16,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -26,22 +25,28 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.DragDrop5
+import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.DragDropState5
 import com.example.dragndrop2.model.Category
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 
 @Composable
 fun rememberDragDropState4(
     lazyListState: LazyListState,
     onSwap: (Int, Int) -> Unit
-): DragDropState4 {
+): DragDropState5 {
+    val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current.density
     val scope = rememberCoroutineScope()
     val state = remember(lazyListState) {
-        DragDropState4(
+        DragDropState5(
+            coroutineScope = coroutineScope,
             state = lazyListState,
-            paddingPx = PADDING_CONTENT_LAZY_COLUMN_DP * density
+            paddingPx = PADDING_CONTENT_LAZY_COLUMN_DP * density,
+            swapList = {
+
+            }
         )
     }
     return state
@@ -51,7 +56,7 @@ fun rememberDragDropState4(
 @ExperimentalFoundationApi
 @Composable
 fun LazyItemScope.DraggableItem4(
-    dragDropState: DragDropState4,
+    dragDropState: DragDropState5,
     category: Category,
     index: Int,
     modifier: Modifier,
@@ -62,13 +67,15 @@ fun LazyItemScope.DraggableItem4(
 
     val paddingContent = PADDING_CONTENT_LAZY_COLUMN_DP * density
 
+    val draggable by dragDropState.draggableApi.collectAsState(initial = DragDrop5.empty)
+
     val currentYOffset: Float by animateFloatAsState(
-        targetValue = dragDropState.yOffsetOfDraggable,
+        targetValue = draggable.getOffset(),
         label = "yOffset"
     )
 
-    val dragging by remember(dragDropState.selectedDraggable) {
-        derivedStateOf { index == dragDropState.selectedDraggable.itemIndex }
+    val isDragging by remember(draggable) {
+        derivedStateOf { index == draggable.originalIndex }
     }
 
     val changedAnimatable = remember { Animatable(0f) }
@@ -78,8 +85,8 @@ fun LazyItemScope.DraggableItem4(
     }*/
 
     LaunchedEffect(Unit) {
-        dragDropState.changedItemFlow.collect { changedItem ->
-            val changedItemIndex = changedItem.itemIndex
+        dragDropState.exchangeApi.collect { changedItem ->
+            val changedItemIndex = changedItem.originalIndex
             //Log.d("TAGS42", "-- -- LaunchedEffect $index; collect $changedItemIndex")
             if (index == changedItemIndex) {
                 coroutineScope.launch {
@@ -87,7 +94,7 @@ fun LazyItemScope.DraggableItem4(
                         val itemInfo = dragDropState.state.layoutInfo.visibleItemsInfo.first { it.index == index }
                         val itemInfoTop = itemInfo.offset
                         changedAnimatable.animateTo(
-                            targetValue = itemInfoTop - changedItem.startPosition.yTop,
+                            targetValue = itemInfoTop - changedItem.newPosition.start,
                             animationSpec = tween(easing = LinearEasing, durationMillis = CHANGED_DURATION_MS)
                         )
                     } catch (ex: CancellationException) {
@@ -101,13 +108,13 @@ fun LazyItemScope.DraggableItem4(
         }
     }
 
-    val draggingModifier = if (dragging) {
+    val draggingModifier = if (isDragging) {
         Modifier
             .zIndex(2f)
             .graphicsLayer {
                 //translationX += currentXOffset
                 translationY += currentYOffset
-                //Log.d("TAGS42", "-- translationY $translationY; -- $a")
+                //Log.d("TAGS42", "-- translationY $currentYOffset; -- $currentYOffset")
             }
     } else {
         Modifier
@@ -124,7 +131,7 @@ fun LazyItemScope.DraggableItem4(
 
     val roundedShape = RoundedCornerShape(14.dp)
 
-    val shadowModifier = if (dragging) {
+    val shadowModifier = if (isDragging) {
         Modifier.shadow(
             elevation = 6.dp,
             ambientColor = Color.Green,
