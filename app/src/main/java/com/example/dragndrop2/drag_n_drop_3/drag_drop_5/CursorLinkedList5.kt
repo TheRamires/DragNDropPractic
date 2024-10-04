@@ -1,20 +1,33 @@
 package com.example.dragndrop2.drag_n_drop_3.drag_drop_5
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.LinkedList
 
 class CursorLinkedList5 {
+    @Volatile
     private var cursor: CursorNode? = null
     private var count = 0
 
     fun getCursor() = cursor
 
-    fun addCursor(cursorItem: DragDrop5) {
+    private val mutex = Mutex()
+
+    suspend fun addCursor(cursorItem: DragDrop5) = mutex.withLock {
         if (cursor != null) throw IllegalStateException()
         cursor = CursorNode(cursorItem)
         count++
     }
 
-    fun clear() {
+    suspend fun refreshCursor(cursorItem: DragDrop5) = mutex.withLock {
+        val oldCursor = cursor ?: return@withLock //throw IllegalStateException()
+        this.cursor = CursorNode(cursorItem).apply {
+            above = oldCursor.above
+            below = oldCursor.below
+        }
+    }
+
+    suspend fun clear() {
         count = 0
         cursor = null
     }
@@ -36,8 +49,7 @@ class CursorLinkedList5 {
         return null
     }
 
-    @Synchronized
-    tailrec fun moveDown(new: DragDrop5): Boolean {
+    tailrec suspend fun moveDown(new: DragDrop5): Boolean = mutex.withLock {
         val cursor = cursor ?: return false//throw IllegalStateException() //!!
 
         val above = cursor.above
@@ -65,8 +77,7 @@ class CursorLinkedList5 {
         }
     }
 
-    @Synchronized
-    tailrec fun moveUp(new: DragDrop5): Boolean {
+    tailrec suspend fun moveUp(new: DragDrop5): Boolean = mutex.withLock {
         val cursor = cursor ?: return false//throw IllegalStateException("No added cursor")
 
         val above = cursor.above
@@ -93,8 +104,6 @@ class CursorLinkedList5 {
             }
         }
     }
-
-    fun getIndexResultList() = getResultList().map { it.originalIndex }
 
     fun getResultList(): List<DragDrop5> {
         val cursor = cursor ?: return emptyList()

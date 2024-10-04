@@ -1,9 +1,11 @@
 package com.example.dragndrop2.screens
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.dragndrop2.drag_n_drop.Item
+import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.SwapModel
 import com.example.dragndrop2.model.Category
 import com.example.dragndrop2.model.PersonUiModel
 import kotlinx.coroutines.CoroutineScope
@@ -65,6 +67,31 @@ class ListScreenViewModel(
     }
 
     fun swap(fromIdx: Int, toIdx: Int) = swap(Category.FIRST, fromIdx, toIdx)
+
+    fun swapList(category: Category, swapList: List<SwapModel>) {
+        uiState_.update {
+            when (category) {
+                Category.FIRST -> {
+                    val oldlist = it.list1
+                    val newList = oldlist.toMutableList()
+
+                    Log.d("TAGS42", "swapList ${swapList}")
+
+                    val map = mutableMapOf<Int, PersonUiModel>()
+                    swapList.forEach {
+                        map[it.to] = oldlist[it.from]
+                    }
+
+                    for (i in 0..newList.lastIndex) {
+                        newList[i] = map[i] ?: newList[i]
+                    }
+
+                    it.copy(list1 = newList)
+                }
+                else -> it
+            }
+        }
+    }
 
     fun swap(category: Category, fromIdx: Int, toIdx: Int) {
         if (fromIdx == toIdx) return

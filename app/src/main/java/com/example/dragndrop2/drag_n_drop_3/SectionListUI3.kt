@@ -51,8 +51,8 @@ fun SectionListUI3(
                 modifier = Modifier,
                 category = Category.FIRST,
                 list = uiState.list1,
-                onSwap = { from, to ->
-                    viewModel.swap(Category.FIRST, from, to)
+                swapList = {
+                    viewModel.swapList(Category.FIRST, it)
                 }
             ) { item ->
                 ListItem3(
@@ -67,8 +67,8 @@ fun SectionListUI3(
                 modifier = Modifier.weight(1f),
                 category = Category.FIRST,
                 list = uiState.list1,
-                onSwap = { from, to ->
-                    viewModel.swap(Category.FIRST, from, to)
+                swapList = {
+                    viewModel.swapList(Category.FIRST, it)
                 }
             ) { item ->
                 ListItem3(
@@ -81,8 +81,8 @@ fun SectionListUI3(
                 modifier = Modifier.weight(1f),
                 category = Category.SECOND,
                 list = uiState.list2,
-                onSwap = { from, to ->
-                    viewModel.swap(Category.SECOND, from, to)
+                swapList = {
+                    viewModel.swapList(Category.FIRST, it)
                 }
             ) { item ->
                 ListItem3(
