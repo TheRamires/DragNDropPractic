@@ -14,6 +14,19 @@ data class DragDrop5(
 
     fun plusYOffset(y: Float): DragDrop5 = plusOffset(Offset(0f, y))
 
+    fun change(
+        changeOriginalPosition: (ItemPosition) -> ItemPosition,
+        changeNewPosition: (ItemPosition) -> ItemPosition
+    ): DragDrop5 = copy(
+        originalPosition = changeOriginalPosition(originalPosition),
+        newPosition = changeNewPosition(newPosition)
+    )
+    fun plusOffset(yOffset: Float): DragDrop5 {
+        val oldPosition = this.newPosition
+        val newPosition = ItemPosition(start = oldPosition.start + yOffset, end = oldPosition.end + yOffset)
+        return copy(newPosition = newPosition)
+    }
+
     fun plusOffset(offset: Offset): DragDrop5 {
         val oldPosition = this.newPosition
         val newPosition = ItemPosition(start = oldPosition.start + offset.y, end = oldPosition.end + offset.y)
@@ -31,6 +44,8 @@ data class ItemPosition(
     val start: Float,
     val end: Float
 ) {
+    fun plus(startPlus: Float, endPlus: Float) = this.copy(start = start + startPlus, end = end + endPlus)
+
     companion object {
         val empty get() = ItemPosition(-1f, -1f)
     }

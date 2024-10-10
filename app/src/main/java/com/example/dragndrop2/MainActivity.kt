@@ -15,6 +15,7 @@ import com.example.dragndrop2.data.loadPersonList2
 import com.example.dragndrop2.data.loadPersonList3
 import com.example.dragndrop2.drag_n_drop.SectionListUI
 import com.example.dragndrop2.drag_n_drop_3.SectionListUI3
+import com.example.dragndrop2.drag_n_drop_6.SectionListUI6
 import com.example.dragndrop2.drag_n_drop_another.SectionListUIAnother
 import com.example.dragndrop2.screens.ListScreenViewModel
 import com.example.dragndrop2.ui.theme.DragNDrop2Theme
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
+                    //drag_n_drop_7()
                     SectionListUI3(
                         viewModel = viewModel(
                             factory = ListScreenViewModel.Factory(

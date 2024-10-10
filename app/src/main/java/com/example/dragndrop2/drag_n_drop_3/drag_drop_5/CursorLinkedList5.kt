@@ -34,6 +34,35 @@ class CursorLinkedList5 {
 
     fun count() = count
 
+    fun changeForEach(map: (item: DragDrop5) -> DragDrop5) {
+        val cursor = cursor ?: return
+        val first = findFirst(cursor)
+        var cur: CursorNode? = first
+
+        while (cur != null) {
+            val draggableItem = cur.draggableItem
+            val new = map(draggableItem)
+            cur.draggableItem = new
+            cur = cur.below
+        }
+    }
+
+    fun changeByOriginalIndex(new: DragDrop5): Boolean {
+        val cursor = cursor ?: return false
+        val first = findFirst(cursor)
+
+        var cur: CursorNode? = first
+        while (cur != null) {
+            val draggableItem = cur.draggableItem
+            if (draggableItem.originalIndex == new.originalIndex) {
+                cur.draggableItem = new
+                return true
+            }
+            cur = cur.below
+        }
+        return false
+    }
+
     fun getByOriginalIndex(originalIndex: Int): DragDrop5? {
         val cursor = cursor ?: return null
         val first = findFirst(cursor)
@@ -131,7 +160,7 @@ class CursorLinkedList5 {
 }
 
 class CursorNode(
-    val draggableItem: DragDrop5,
+    var draggableItem: DragDrop5,
 ) {
     var above: CursorNode? = null
         set(value) {

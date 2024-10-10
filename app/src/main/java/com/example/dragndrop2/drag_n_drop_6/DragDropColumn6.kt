@@ -1,4 +1,4 @@
-package com.example.dragndrop2.drag_n_drop_3
+package com.example.dragndrop2.drag_n_drop_6
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -17,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.Direction
 import com.example.dragndrop2.data.SwapModel
 import com.example.dragndrop2.model.Category
 import kotlinx.coroutines.Job
@@ -27,7 +26,7 @@ const val PADDING_CONTENT_LAZY_COLUMN_DP = 8
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun <T : Any> DragDropColumn3(
+fun <T : Any> DragDropColumn6(
     list: List<T>,
     category: Category,
     swapList: (List<SwapModel>) -> Unit,
@@ -38,7 +37,7 @@ fun <T : Any> DragDropColumn3(
     var overscrollJob by remember { mutableStateOf<Job?>(null) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val dragDropState = rememberDragDropState4(listState, swapList)
+    val dragDropState = rememberDragDropState6(listState, swapList)
 
     LazyColumn(
         modifier = modifier
@@ -46,7 +45,6 @@ fun <T : Any> DragDropColumn3(
                 detectDragGesturesAfterLongPress(
                     onDrag = { change, offset ->
                         change.consume()
-
 
                         val moveDirection = when {
                             offset.y < 0 -> Direction.MOVE_UP // move up
@@ -88,7 +86,7 @@ fun <T : Any> DragDropColumn3(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         itemsIndexed(items = list) { index, item ->
-            DraggableItem4(
+            DraggableItem6(
                 dragDropState = dragDropState,
                 category = category,
                 index = index,

@@ -1,4 +1,4 @@
-package com.example.dragndrop2.drag_n_drop_3
+package com.example.dragndrop2.drag_n_drop_6
 
 import android.util.Log
 import androidx.compose.animation.core.Animatable
@@ -30,22 +30,25 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.DragDropState5
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dragndrop2.data.SwapModel
+import com.example.dragndrop2.drag_n_drop_3.CHANGED_DURATION_MS
+import com.example.dragndrop2.drag_n_drop_3.PADDING_CONTENT_LAZY_COLUMN_DP
+import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.DragDropState5
 import com.example.dragndrop2.model.Category
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
-fun rememberDragDropState4(
+fun rememberDragDropState6(
     lazyListState: LazyListState,
     swapList: (List<SwapModel>) -> Unit
-): DragDropState5 {
+): DragDropState6 {
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current.density
     val scope = rememberCoroutineScope()
     val state = remember(lazyListState) {
-        DragDropState5(
+        DragDropState6(
             coroutineScope = coroutineScope,
             state = lazyListState,
             paddingPx = PADDING_CONTENT_LAZY_COLUMN_DP * density,
@@ -68,12 +71,11 @@ private const val SHAPE_CORNER_DP = 14
 
 @ExperimentalFoundationApi
 @Composable
-fun LazyItemScope.DraggableItem4(
-    dragDropState: DragDropState5,
+fun LazyItemScope.DraggableItem6(
+    dragDropState: DragDropState6,
     category: Category,
     index: Int,
     modifier: Modifier,
-    animateWrapper: DragDropAnimationState = rememberAnimateWrapper(),
     content: @Composable () -> Unit
 ) {
     val density = LocalDensity.current.density
@@ -82,14 +84,16 @@ fun LazyItemScope.DraggableItem4(
 
     val itemDragState = rememberDraggingState()
 
-    val draggableOffset: Float by animateFloatAsState(
-        targetValue = animateWrapper.dragOffset.value,
+    var draggableOffset by remember { mutableFloatStateOf(0f) }
+
+    val draggableAnim: Float by animateFloatAsState(
+        targetValue = draggableOffset,
         label = "draggableAnimation"
     )
 
     DisposableEffect(Unit) {
         onDispose {
-
+            Log.d("TAGS42", "on dispose $index")
         }
     }
 
@@ -98,17 +102,14 @@ fun LazyItemScope.DraggableItem4(
         dragDropState.draggableApi.collect { draggableItem ->
             when {
                 index == draggableItem.originalIndex -> {
-                    animateWrapper.dragOffset.value = draggableItem.getOffset()
-                    //Log.d("TAGS42", "$index onDragging")
+                    //draggableOffset = draggableItem.offset.value
                     itemDragState.onDragging()
                 }
 
                 draggableItem.isEmpty() -> {
-                    //Log.d("TAGS42", "$index onStopDragging")
-                    val dragOffset = animateWrapper.dragOffset.value
-                    if (dragOffset != 0f) {
-                        animateWrapper.dragOffset.value -= dragOffset // test 1 to .., 1 to .., 1 to ..
-                    }
+                    /*if (draggableOffset != 0f) {
+                        draggableOffset = 0f
+                    }*/
                     itemDragState.onStopDragging()
                 }
             }
@@ -121,36 +122,6 @@ fun LazyItemScope.DraggableItem4(
             val exchangedItemIndex = exchangeItem.originalIndex
             //Log.d("TAGS42", "$index onExchanging $changedItemIndex")
             itemDragState.onExchanging(index == exchangedItemIndex)
-
-            when (exchangedItemIndex) {
-                -1 -> {
-                    val value = animateWrapper.exchangeAnimatable.value
-                    if (value != 0f) animateWrapper.exchangeAnimatable.snapTo(0f) // test 1 to 2, 1 to 2, 1 to 2
-                }
-
-                index -> {
-                    coroutineScope.launch {
-                        try {
-                            val itemInfo =
-                                dragDropState.state.layoutInfo.visibleItemsInfo.first { it.index == index }
-                            val itemInfoTop = itemInfo.offset
-                            //Log.d("TAGS42", "animation exchange start animation $index; exchangeItem ${exchangeItem.isEmpty()}")
-                            animateWrapper.exchangeAnimatable.animateTo(
-                                targetValue = exchangeItem.newPosition.start - itemInfoTop,
-                                animationSpec = tween(
-                                    easing = LinearEasing,
-                                    durationMillis = CHANGED_DURATION_MS
-                                )
-                            )
-                        } catch (ex: CancellationException) {
-                            //Log.d("TAGS42", "animation exchange ex $index")
-                            throw ex
-                        }
-                    }.invokeOnCompletion {
-                        //Log.d("TAGS42", "animation exchange complete $index")
-                    }
-                }
-            }
         }
     }
 
@@ -164,7 +135,7 @@ fun LazyItemScope.DraggableItem4(
                 Modifier
                     .zIndex(2f)
                     .graphicsLayer {
-                        translationY += draggableOffset
+                        translationY += dragDropState.draggableApi.replayCache.last().offset.value
                     }
             }
 
@@ -173,7 +144,7 @@ fun LazyItemScope.DraggableItem4(
                 Modifier
                     .zIndex(1f)
                     .graphicsLayer {
-                        translationY += animateWrapper.exchangeAnimatable.value
+                        translationY += dragDropState.exchangeApi.replayCache.last().animatable.value
                     }
             }
 

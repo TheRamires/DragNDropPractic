@@ -1,20 +1,26 @@
 package com.example.dragndrop2.drag_n_drop_3.drag_drop_5
 
 import android.util.Log
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
+import com.example.dragndrop2.data.SwapModel
 import com.example.dragndrop2.drag_n_drop.offsetEnd
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 
 @Immutable
 class DragDropState5(
-    coroutineScope: CoroutineScope,
+    private val coroutineScope: CoroutineScope,
     val state: LazyListState,
     private val paddingPx: Float,
     private val swapList: (List<SwapModel>) -> Unit
@@ -88,48 +94,6 @@ class DragDropState5(
         draggable.emit(item.plusYOffset(yOffset))
     }
 
-    suspend fun checkForOverScroll(moveDirection: Direction): Float {
-        val item = draggable.replayCache.last()
-        val start = layoutInfo.viewportStartOffset
-        val end = layoutInfo.viewportEndOffset
-        val itemStart = item.newPosition.start
-        val itemEnd = item.newPosition.end
-
-        val lastExchangeEvent_ = lastExchangeEvent
-        val b = false//lastExchangeEvent_ is DragDropInternalEvent.ScrollEvent && moveDirection != lastExchangeEvent_.direction
-
-        return when {
-            b -> {
-                Log.d("TAGS42", "-- 1 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                lastExchangeEvent = null
-                0f
-            }
-            itemEnd > end && moveDirection == Direction.MOVE_DOWN -> {
-                Log.d("TAGS42", "-- 2 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                val offset = 50f //itemEnd - end + 50
-                lastExchangeEvent = DragDropInternalEvent.ScrollEvent(item, moveDirection)
-                justMove(offset)
-                //draggable.emit(item.plusYOffset(offset))
-                offset
-            }
-            itemStart < start && moveDirection == Direction.MOVE_UP -> {
-                Log.d("TAGS42", "-- 3 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                val offset = -50f //itemStart - start - 50
-                lastExchangeEvent = DragDropInternalEvent.ScrollEvent(item, moveDirection)
-                justMove(offset)
-                //draggable.emit(item.plusYOffset(offset))
-                offset
-            }
-            else -> {
-                if (lastExchangeEvent is DragDropInternalEvent.ScrollEvent) {
-                    lastExchangeEvent = null
-                    Log.d("TAGS42", "-- 4 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                }
-                0f
-            }
-        }
-    }
-
     private fun isTheSameExchangeEvent(onDragEvent: OnDragEvent, originalIndex: Int): Boolean {
         val lastExchange = lastExchangeEvent
         if (lastExchange !is DragDropInternalEvent.ExchangeEvent) return false
@@ -159,13 +123,72 @@ class DragDropState5(
 
     private suspend fun handleDragEvent(onDragEvent: OnDragEvent, draggableItem: DragDrop5) {
         if (draggableItem.isEmpty()) return
-        if (lastExchangeEvent is DragDropInternalEvent.ScrollEvent) return
+        //if (lastExchangeEvent is DragDropInternalEvent.ScrollEvent) return
 
         val movingUp = onDragEvent.direction == Direction.MOVE_UP
         val movingDown = onDragEvent.direction == Direction.MOVE_DOWN
 
         //Log.d("TAGS42", "on drag ${onDragEvent.offset.y}")
-        var draggable = draggableItem.plusOffset(onDragEvent.offset)
+
+        val startOfLayout = layoutInfo.viewportStartOffset
+        val endOfLayout = layoutInfo.viewportEndOffset
+
+        val startOfItem = draggableItem.newPosition.start
+        val endOfItem = draggableItem.newPosition.end
+        val scrollOffset = endOfItem - startOfItem
+
+        var draggable = when (onDragEvent.direction) {
+            Direction.MOVE_UP -> {
+                if (startOfItem <= startOfLayout - scrollOffset * 0.15) {
+                    Log.d("TAGS42", "move up")
+                    coroutineScope.launch {
+                        state.animateScrollBy(
+                            -scrollOffset, tween(easing = FastOutLinearInEasing)
+                        )
+                    }.join()
+                    cursorLinkedList.changeForEach {
+                        it.copy(
+                            originalPosition = it.originalPosition.plus(scrollOffset, scrollOffset),
+                            newPosition = it.newPosition.plus(scrollOffset, scrollOffset)
+                        )
+                    }
+                    draggableItem.plusOffset(-scrollOffset)
+                } else {
+                    Log.d("TAGS42", "move no up")
+                    draggableItem.plusOffset(onDragEvent.offset)
+                }
+            }
+            Direction.MOVE_DOWN -> {
+                if (endOfItem >= endOfLayout + scrollOffset * 0.15) {
+                    Log.d("TAGS42", "move down")
+                    coroutineScope.launch {
+                        state.animateScrollBy(
+                            scrollOffset, tween(easing = FastOutLinearInEasing)
+                        )
+                    }.join()
+                    cursorLinkedList.changeForEach {
+                        it.copy(
+                            originalPosition = it.originalPosition.plus(-scrollOffset, -scrollOffset),
+                            newPosition = it.newPosition.plus(-scrollOffset, -scrollOffset)
+                        )
+                    }
+                    /*draggableItem.change(
+                        changeOriginalPosition = { it.plus(-scrollOffset, -scrollOffset) },
+                        changeNewPosition = { it.plus(scrollOffset, scrollOffset) },
+                    ).also {
+                        Log.d("TAGS42", "scrollOffset $scrollOffset; originalPosition ${it.originalPosition}; newPosition ${it.newPosition}")
+                    }*/
+                    draggableItem.plusOffset(scrollOffset)
+                } else {
+                    Log.d("TAGS42", "move no down")
+                    draggableItem.plusOffset(onDragEvent.offset)
+                }
+            }
+            else -> {
+                Log.d("TAGS42", "move no no")
+                draggableItem
+            }
+        }
 
         val visibleItemsInfoList = if (movingUp) visibleItemsInfo.reversed() else visibleItemsInfo
 
@@ -241,5 +264,75 @@ class DragDropState5(
             }
         }
         this.draggable.emit(draggable)
+    }
+
+    private var isScrolling = false
+
+    suspend fun checkForOverScroll(moveDirection: Direction) {
+        val item = draggable.replayCache.last()
+        val start = layoutInfo.viewportStartOffset
+        val end = layoutInfo.viewportEndOffset
+        val itemStart = item.newPosition.start
+        val itemEnd = item.newPosition.end
+
+        val lastExchangeEvent_ = lastExchangeEvent
+        val b = false//lastExchangeEvent_ is DragDropInternalEvent.ScrollEvent && moveDirection != lastExchangeEvent_.direction
+
+        when {
+            itemEnd > end && moveDirection == Direction.MOVE_DOWN -> {
+                isScrolling = true
+                val offset = 50f //itemEnd - end +
+                justMove(offset)
+                Log.d("TAGS42", "-- 2 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
+
+                lastExchangeEvent = DragDropInternalEvent.ScrollEvent(item, moveDirection)
+                cursorLinkedList.changeForEach { item ->
+                    item.copy(
+                        originalPosition = item.originalPosition.plus(-offset, -offset),
+                        newPosition = item.newPosition.plus(-offset, -offset)
+                    )
+                }
+                draggable.emit(item.change(
+                    changeOriginalPosition = { it.plus(-offset, -offset) },
+                    changeNewPosition = { it.plus(-offset, -offset) }
+                ))
+                //draggable.emit(item.plusYOffset(offset))
+                offset
+                state.animateScrollBy(
+                    offset, tween(easing = FastOutLinearInEasing)
+                )
+            }
+            itemStart < start && moveDirection == Direction.MOVE_UP -> {
+                isScrolling = true
+                val offset = -50f //itemStart - start - 50
+                justMove(offset)
+                Log.d("TAGS42", "-- 3 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
+
+                lastExchangeEvent = DragDropInternalEvent.ScrollEvent(item, moveDirection)
+                cursorLinkedList.changeForEach { item ->
+                    item.copy(
+                        originalPosition = item.originalPosition.plus(-offset, -offset),
+                        newPosition = item.newPosition.plus(-offset, -offset)
+                    )
+                }
+                draggable.emit(item.change(
+                    changeOriginalPosition = { it.plus(-offset, -offset) },
+                    changeNewPosition = { it.plus(-offset, -offset) }
+                ))
+                //draggable.emit(item.plusYOffset(offset))
+                offset
+                state.animateScrollBy(
+                    offset, tween(easing = FastOutLinearInEasing)
+                )
+            }
+            else -> {
+                isScrolling = false
+                if (lastExchangeEvent is DragDropInternalEvent.ScrollEvent) {
+                    lastExchangeEvent = null
+                    Log.d("TAGS42", "-- 4 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
+                }
+                0f
+            }
+        }
     }
 }

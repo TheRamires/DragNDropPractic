@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.dragndrop2.drag_n_drop.Item
-import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.SwapModel
+import com.example.dragndrop2.data.SwapModel
 import com.example.dragndrop2.model.Category
 import com.example.dragndrop2.model.PersonUiModel
 import kotlinx.coroutines.CoroutineScope
