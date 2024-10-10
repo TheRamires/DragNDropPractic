@@ -4,12 +4,14 @@ import android.util.Log
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import com.example.dragndrop2.data.SwapModel
 import com.example.dragndrop2.drag_n_drop.offsetEnd
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,7 +29,6 @@ class DragDropState5(
 ) {
     val draggableApi get() = draggable.asSharedFlow()
     val exchangeApi get() = exchange.asSharedFlow()
-
 
     private val dragFlow = MutableSharedFlow<OnDragEvent>()
 
@@ -137,15 +138,17 @@ class DragDropState5(
         val endOfItem = draggableItem.newPosition.end
         val scrollOffset = endOfItem - startOfItem
 
-        var draggable = when (onDragEvent.direction) {
-            Direction.MOVE_UP -> {
-                if (startOfItem <= startOfLayout - scrollOffset * 0.15) {
-                    Log.d("TAGS42", "move up")
+        var draggable = when {
+            movingUp -> {
+                if (isScrolling != 1 && startOfItem <= startOfLayout) {
                     coroutineScope.launch {
                         state.animateScrollBy(
-                            -scrollOffset, tween(easing = FastOutLinearInEasing)
+                            -10000f, tween(easing = FastOutLinearInEasing, durationMillis = 5000)
                         )
-                    }.join()
+                    }
+                    isScrolling = 1
+
+                    return
                     cursorLinkedList.changeForEach {
                         it.copy(
                             originalPosition = it.originalPosition.plus(scrollOffset, scrollOffset),
@@ -154,18 +157,22 @@ class DragDropState5(
                     }
                     draggableItem.plusOffset(-scrollOffset)
                 } else {
-                    Log.d("TAGS42", "move no up")
+                    if (isScrolling == -1) {
+                        isScrolling = 0
+                        state.stopScroll()
+                    }
                     draggableItem.plusOffset(onDragEvent.offset)
                 }
             }
-            Direction.MOVE_DOWN -> {
-                if (endOfItem >= endOfLayout + scrollOffset * 0.15) {
-                    Log.d("TAGS42", "move down")
+            movingDown -> {
+                if (isScrolling != -1 && endOfItem >= endOfLayout) {
                     coroutineScope.launch {
                         state.animateScrollBy(
-                            scrollOffset, tween(easing = FastOutLinearInEasing)
+                            10000f, tween(easing = FastOutLinearInEasing, durationMillis = 5000)
                         )
-                    }.join()
+                    }
+                    isScrolling = -1
+                    return
                     cursorLinkedList.changeForEach {
                         it.copy(
                             originalPosition = it.originalPosition.plus(-scrollOffset, -scrollOffset),
@@ -180,15 +187,23 @@ class DragDropState5(
                     }*/
                     draggableItem.plusOffset(scrollOffset)
                 } else {
-                    Log.d("TAGS42", "move no down")
+                    if(isScrolling == 1) {
+                        isScrolling = 0
+                        state.stopScroll()
+                    }
                     draggableItem.plusOffset(onDragEvent.offset)
                 }
             }
             else -> {
-                Log.d("TAGS42", "move no no")
+                Log.d("TAGS42", "scrolling none none none")
+                state.stopScroll()
                 draggableItem
             }
         }
+        if (isScrolling != 0) {
+            return
+        }
+
 
         val visibleItemsInfoList = if (movingUp) visibleItemsInfo.reversed() else visibleItemsInfo
 
@@ -266,9 +281,9 @@ class DragDropState5(
         this.draggable.emit(draggable)
     }
 
-    private var isScrolling = false
+    var isScrolling = 0
 
-    suspend fun checkForOverScroll(moveDirection: Direction) {
+    /*suspend fun checkForOverScroll(moveDirection: Direction) {
         val item = draggable.replayCache.last()
         val start = layoutInfo.viewportStartOffset
         val end = layoutInfo.viewportEndOffset
@@ -334,5 +349,5 @@ class DragDropState5(
                 0f
             }
         }
-    }
+    }*/
 }

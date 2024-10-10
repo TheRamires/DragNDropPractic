@@ -1,6 +1,8 @@
 package com.example.dragndrop2.drag_n_drop_3
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,13 +10,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.Direction
@@ -39,6 +49,19 @@ fun <T : Any> DragDropColumn3(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val dragDropState = rememberDragDropState4(listState, swapList)
+
+    /*
+    Слущатель скролла,
+    При изменении первого/последнего видимого элемента необхожимо сместить его
+     */
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo }
+            .collect { layoutInfo ->
+                val visibleItems = layoutInfo.visibleItemsInfo
+                if (visibleItems.isNullOrEmpty()) return@collect
+                //Log.d("TAGS42", "listState layoutInfo; ${visibleItems.last().index}")
+            }
+    }
 
     LazyColumn(
         modifier = modifier
