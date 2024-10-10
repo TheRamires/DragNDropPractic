@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 @Immutable
-class DragDropState5(
+class DragDropState6(
     coroutineScope: CoroutineScope,
     val state: LazyListState,
     private val paddingPx: Float,
@@ -28,8 +28,6 @@ class DragDropState5(
     private val draggable = MutableSharedFlow<DragDrop5>(replay = 1)
 
     private val exchange = MutableSharedFlow<DragDrop5>()
-
-    private val cursorLinkedList = CursorLinkedList5()
 
     private var lastExchangeEvent: DragDropInternalEvent? = null
 
@@ -54,7 +52,6 @@ class DragDropState5(
         }
 
         val item = DragDrop5(index, ItemPosition(start, end))
-        cursorLinkedList.addCursor(item)
         draggable.emit(item)
         dragFlow.onEach { onDragEvent ->
             handleDragEvent(onDragEvent, draggable.replayCache.last())
@@ -75,86 +72,15 @@ class DragDropState5(
         Log.d("TAGS42", "onDragInterrupted")
         this.draggable.emit(DragDrop5.empty)
         exchange.emit(DragDrop5.empty)
-
-        //delay(1000)
-        swapList(cursorLinkedList.getResultList().map {
-            SwapModel(from = it.originalIndex, to = it.newIndex)
-        })
-        cursorLinkedList.clear()
     }
 
-    suspend fun justMove(yOffset: Float) {
-        val item = draggable.replayCache.last()
-        draggable.emit(item.plusYOffset(yOffset))
-    }
-
-    suspend fun checkForOverScroll(moveDirection: Direction): Float {
-        val item = draggable.replayCache.last()
-        val start = layoutInfo.viewportStartOffset
-        val end = layoutInfo.viewportEndOffset
-        val itemStart = item.newPosition.start
-        val itemEnd = item.newPosition.end
-
-        val lastExchangeEvent_ = lastExchangeEvent
-        val b = false//lastExchangeEvent_ is DragDropInternalEvent.ScrollEvent && moveDirection != lastExchangeEvent_.direction
-
-        return when {
-            b -> {
-                Log.d("TAGS42", "-- 1 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                lastExchangeEvent = null
-                0f
-            }
-            itemEnd > end && moveDirection == Direction.MOVE_DOWN -> {
-                Log.d("TAGS42", "-- 2 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                val offset = 50f //itemEnd - end + 50
-                lastExchangeEvent = DragDropInternalEvent.ScrollEvent(item, moveDirection)
-                justMove(offset)
-                //draggable.emit(item.plusYOffset(offset))
-                offset
-            }
-            itemStart < start && moveDirection == Direction.MOVE_UP -> {
-                Log.d("TAGS42", "-- 3 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                val offset = -50f //itemStart - start - 50
-                lastExchangeEvent = DragDropInternalEvent.ScrollEvent(item, moveDirection)
-                justMove(offset)
-                //draggable.emit(item.plusYOffset(offset))
-                offset
-            }
-            else -> {
-                if (lastExchangeEvent is DragDropInternalEvent.ScrollEvent) {
-                    lastExchangeEvent = null
-                    Log.d("TAGS42", "-- 4 checkForOverScroll -- start $start; end $end; itemStart $itemStart; itemEnd $itemEnd")
-                }
-                0f
-            }
-        }
-    }
+    suspend fun checkForOverScroll(moveDirection: Direction): Float = 0f
 
     private fun isTheSameExchangeEvent(onDragEvent: OnDragEvent, originalIndex: Int): Boolean {
         val lastExchange = lastExchangeEvent
         if (lastExchange !is DragDropInternalEvent.ExchangeEvent) return false
         return lastExchange.dragDrop5.originalIndex == originalIndex
                 && lastExchange.direction == onDragEvent.direction
-    }
-
-    private fun fillParams(cursorLinkedList: CursorLinkedList5, originalIndex: Int, listInfo: LazyListItemInfo): Triple<Int, Float, Float> {
-        val stackItem = cursorLinkedList.getByOriginalIndex(originalIndex)
-
-        /*val top = listInfo.offset * 1f
-        val bottom = listInfo.offsetEnd * 1f
-        return top to bottom*/
-
-        return if (stackItem != null) {
-            val index = stackItem.newIndex
-            val top = stackItem.newPosition.start
-            val bottom = stackItem.newPosition.end
-            Triple(index, top, bottom)
-        } else {
-            val index = listInfo.index
-            val top = listInfo.offset * 1f
-            val bottom = listInfo.offsetEnd * 1f
-            Triple(index, top, bottom)
-        }
     }
 
     private suspend fun handleDragEvent(onDragEvent: OnDragEvent, draggableItem: DragDrop5) {
@@ -173,7 +99,10 @@ class DragDropState5(
             val originalIndex = listInfo.index
             if (isTheSameExchangeEvent(onDragEvent, originalIndex)) return@forEach
 
-            val (index, top, bottom) = fillParams(cursorLinkedList, originalIndex, listInfo)
+            val index = listInfo.index
+            val top = listInfo.offset * 1f
+            val bottom = listInfo.offsetEnd * 1f
+
             val height = bottom - top
 
             val draggableTop = draggable.newPosition.start
@@ -199,13 +128,18 @@ class DragDropState5(
                             )
                         )
                         lastExchangeEvent = DragDropInternalEvent.ExchangeEvent(exchange, onDragEvent.direction)
-                        cursorLinkedList.moveUp(exchange)
+
 
                         //Log.d("TAGS42", "movingUp - old draggable ${draggable.newIndex}; exchange ${index}")
                         draggable = draggable.withChangedIndex(index)
-                        cursorLinkedList.refreshCursor(draggable)
+
                         Log.d("TAGS42", "movingUp - new draggable ${draggable.newIndex}; exchange ${exchange.newIndex}")
                         this.exchange.emit(exchange)
+
+                        swapList(listOf(
+                            SwapModel(exchange.originalIndex, exchange.newIndex),
+                            SwapModel(draggable.originalIndex, draggable.newIndex),
+                        ))
                     }
                 }
 
@@ -229,13 +163,16 @@ class DragDropState5(
                         )
 
                         lastExchangeEvent = DragDropInternalEvent.ExchangeEvent(exchange, onDragEvent.direction)
-                        cursorLinkedList.moveDown(exchange)
 
                         //Log.d("TAGS42", "movingDown - old draggable ${draggable.newIndex}; exchange ${index}")
                         draggable = draggable.withChangedIndex(index)
-                        cursorLinkedList.refreshCursor(draggable)
                         Log.d("TAGS42", "movingDown - new draggable ${draggable.newIndex}; exchange ${exchange.newIndex}")
                         this.exchange.emit(exchange)
+
+                        swapList(listOf(
+                            SwapModel(draggable.originalIndex, draggable.newIndex),
+                            SwapModel(exchange.originalIndex, exchange.newIndex),
+                        ))
                     }
                 }
             }

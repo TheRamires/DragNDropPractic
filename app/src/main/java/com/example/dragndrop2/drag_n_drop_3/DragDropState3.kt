@@ -24,7 +24,7 @@ private const val MOVE_UP = 1
 private const val MOVE_DOWN = -1
 private const val MOVE_NONE = 0
 
-const val CHANGED_DURATION_MS = 100
+const val CHANGED_DURATION_MS = 500
 
 data class DraggableItem(
     val itemIndex: Int,

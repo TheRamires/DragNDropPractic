@@ -3,7 +3,6 @@ package com.example.dragndrop2.drag_n_drop_3
 import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -14,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.DragDropState5
+import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.DragDropState6
 import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.SwapModel
 import com.example.dragndrop2.model.Category
 import kotlinx.coroutines.CancellationException
@@ -87,6 +88,12 @@ fun LazyItemScope.DraggableItem4(
         label = "draggableAnimation"
     )
 
+    DisposableEffect(Unit) {
+        onDispose {
+            Log.d("TAGS42", "on dispose $index")
+        }
+    }
+
     //dragging launch effect
     LaunchedEffect(Unit) {
         dragDropState.draggableApi.collect { draggableItem ->
@@ -96,6 +103,7 @@ fun LazyItemScope.DraggableItem4(
                     //Log.d("TAGS42", "$index onDragging")
                     itemDragState.onDragging()
                 }
+
                 draggableItem.isEmpty() -> {
                     //Log.d("TAGS42", "$index onStopDragging")
                     val dragOffset = animateWrapper.dragOffset.value
@@ -120,6 +128,7 @@ fun LazyItemScope.DraggableItem4(
                     val value = animateWrapper.exchangeAnimatable.value
                     if (value != 0f) animateWrapper.exchangeAnimatable.snapTo(0f) // test 1 to 2, 1 to 2, 1 to 2
                 }
+
                 index -> {
                     coroutineScope.launch {
                         try {
@@ -135,49 +144,60 @@ fun LazyItemScope.DraggableItem4(
                                 )
                             )
                         } catch (ex: CancellationException) {
-                            //Log.d("TAGS42", "animation exchange ex $index")
+                            Log.d("TAGS42", "animation exchange ex $index")
                             throw ex
                         }
                     }.invokeOnCompletion {
-                        //Log.d("TAGS42", "animation exchange complete $index")
+                        Log.d("TAGS42", "animation exchange complete $index")
                     }
                 }
             }
         }
     }
 
-    val isDragging = itemDragState.state == ItemDragState.Type.DRAGGING
-    val none = itemDragState.state == ItemDragState.Type.NONE
-    val exchange = itemDragState.state == ItemDragState.Type.EXCHANGE
+    val draggableModifier = remember(itemDragState.state) {
+        val isDragging = itemDragState.state == ItemDragState.Type.DRAGGING
+        val none = itemDragState.state == ItemDragState.Type.NONE
+        val exchange = itemDragState.state == ItemDragState.Type.EXCHANGE
+        val draggableModifier = when {
+            isDragging -> {
+                //Log.d("TAGS42", "change draggableModifier to ${itemDragState.state}; ${index}")
+                Modifier
+                    .zIndex(2f)
+                    .graphicsLayer {
+                        translationY += draggableOffset
+                    }
+            }
 
-    val draggableModifier = when {
-        isDragging -> {
-            Modifier
-                .zIndex(2f)
-                .graphicsLayer {
-                    translationY += draggableOffset
+            exchange -> {
+                //Log.d("TAGS42", "change draggableModifier to ${itemDragState.state}; ${index}")
+                Modifier
+                    .zIndex(1f)
+                    .graphicsLayer {
+                        translationY += animateWrapper.exchangeAnimatable.value
+                    }
+            }
+
+            else -> {
+                //Log.d("TAGS42", "change draggableModifier to ${itemDragState.state}; ${index}")
+                Modifier.graphicsLayer {
+
+                    //translationY += animateWrapper.exchangeAnimatable.value
+                    //Log.d("TAGS42", "${index}; draggableOffset $draggableOffset; exchangeAnimatable ${animateWrapper.exchangeAnimatable.value}; translationY $translationY")
                 }
+            }
         }
-        exchange -> {
-            Modifier
-                .zIndex(1f)
-                .graphicsLayer {
-                    translationY += animateWrapper.exchangeAnimatable.value
-                }
-        }
-        else -> {
-            Modifier
-        }
+
+        val shadowModifier = if (isDragging) Modifier.shadow(
+            elevation = 6.dp,
+            ambientColor = Color.Green,
+            shape = RoundedCornerShape(SHAPE_CORNER_DP.dp)
+        ) else Modifier
+        draggableModifier.then(shadowModifier)
     }
 
-    val shadowModifier = if (isDragging) Modifier.shadow(
-        elevation = 6.dp,
-        ambientColor = Color.Green,
-        shape = RoundedCornerShape(SHAPE_CORNER_DP.dp)
-    ) else Modifier
-
     Box(
-        modifier = draggableModifier.then(shadowModifier)
+        modifier = draggableModifier
     ) {
         Card(shape = RoundedCornerShape(SHAPE_CORNER_DP.dp)) {
             content()

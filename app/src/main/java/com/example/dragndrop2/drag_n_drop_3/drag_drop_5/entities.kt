@@ -12,7 +12,9 @@ data class DragDrop5(
 
     fun isEmpty(): Boolean = originalIndex == -1
 
-    fun withChangedPosition(offset: Offset): DragDrop5 {
+    fun plusYOffset(y: Float): DragDrop5 = plusOffset(Offset(0f, y))
+
+    fun plusOffset(offset: Offset): DragDrop5 {
         val oldPosition = this.newPosition
         val newPosition = ItemPosition(start = oldPosition.start + offset.y, end = oldPosition.end + offset.y)
         return copy(newPosition = newPosition)
@@ -40,4 +42,9 @@ enum class Direction {
 
 data class OnDragEvent(val offset: Offset, val direction: Direction)
 
-data class ExchangeEvent(val dragDrop5: DragDrop5, val direction: Direction)
+sealed class DragDropInternalEvent {
+
+    data class ScrollEvent(val dragDrop5: DragDrop5, val direction: Direction): DragDropInternalEvent()
+
+    data class ExchangeEvent(val dragDrop5: DragDrop5, val direction: Direction): DragDropInternalEvent()
+}

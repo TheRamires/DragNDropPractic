@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.example.dragndrop2.drag_n_drop_3.drag_drop_5.Direction
@@ -69,18 +70,19 @@ fun <T : Any> DragDropColumn3(
 
                         //Log.d("TAGS42", "-- onDrag --")
 
-                        dragDropState
-                            .checkForOverScroll()
-                            .takeIf { it != 0f }
-                            ?.let {
-                                overscrollJob =
-                                    scope.launch {
+                        coroutineScope.launch {
+                            dragDropState
+                                .checkForOverScroll(moveDirection)
+                                .takeIf { it != 0f }
+                                ?.let {
+                                    overscrollJob = scope.launch {
                                         dragDropState.state.animateScrollBy(
-                                            it*1.3f, tween(easing = FastOutLinearInEasing)
+                                            it, tween(easing = FastOutLinearInEasing)
                                         )
                                     }
-                            }
-                            ?: run { overscrollJob?.cancel() }
+                                }
+                                ?: run { overscrollJob?.cancel() }
+                        }
                     },
                     onDragStart = { offset ->
                         coroutineScope.launch {
